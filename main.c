@@ -1,26 +1,29 @@
 #include "enregistrement.h"
-
-ChampSaisie champEmail = {{LARGEUR_ECRAN / 2 - 150, 200, 300, 40}, "Email", false};
-ChampSaisie champNumero = {{LARGEUR_ECRAN / 2 - 150, 260, 300, 40}, "Numero", false};
-ChampSaisie champNom = {{LARGEUR_ECRAN / 2 - 150, 140, 300, 40}, "Nom", false};
-ChampSaisie champPrenoms = {{LARGEUR_ECRAN / 2 - 150, 80, 300, 40}, "Prénoms", false};
+#include <SDL.h>
 
 int main(int argc, char* argv[]) {
     initialiserSDL();
 
-    SDL_bool enCours = SDL_TRUE;
+    bool quitter = false;
     SDL_Event evenement;
 
-    while (enCours) {
+    while (!quitter) {
         while (SDL_PollEvent(&evenement)) {
             if (evenement.type == SDL_QUIT) {
-                enCours = SDL_FALSE;
-            }
-            else if (evenement.type == SDL_TEXTINPUT || evenement.type == SDL_KEYDOWN) {
-                gererSaisie(evenement, &champNom);
-                gererSaisie(evenement, &champPrenoms);
-                gererSaisie(evenement, &champEmail);
-                gererSaisie(evenement, &champNumero);
+                quitter = true;
+            } else if (evenement.type == SDL_MOUSEBUTTONDOWN) {
+                int mouseX, mouseY;
+                SDL_GetMouseState(&mouseX, &mouseY);
+
+                gererClicChampSaisie(&champEmail, mouseX, mouseY);
+                gererClicChampSaisie(&champMotDePasse, mouseX, mouseY);
+                gererClicBouton(&boutonConnexion, mouseX, mouseY);
+
+            } else if (evenement.type == SDL_TEXTINPUT) {
+                gererSaisieTexte(evenement);
+            }else if (evenement.type == SDL_KEYDOWN && evenement.key.keysym.sym == SDLK_DELETE || evenement.key.keysym.sym == SDLK_BACKSPACE ){
+                printf("Vous avez cliqué sur delete  " );
+                handleDelete(evenement);
             }
         }
 

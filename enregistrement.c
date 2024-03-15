@@ -1,4 +1,5 @@
 #include "enregistrement.h"
+#include <SDL_ttf.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -6,12 +7,13 @@ SDL_Window* fenetre = NULL;
 SDL_Renderer* rendu = NULL;
 TTF_Font* police = NULL;
 
-// DEBUT test
-SDL_Texture* textureTexte;
-SDL_Rect rectTexte;
-char texteSaisi[256] = "";
+char saisie[100] = "";
 
-// FIN test
+ChampSaisie champEmail = {{LARGEUR_ECRAN / 2 - 150, 200, 300, 40}, "Adresse e-mail ", "", true, false};
+ChampSaisie champMotDePasse = {{LARGEUR_ECRAN / 2 - 150, 260, 300, 40}, "Mot de passe", "", true, false};
+Bouton boutonConnexion = {{LARGEUR_ECRAN / 2 - 150, 320, 300, 40}, "Se Connecter", false, false};
+
+ChampSaisie* champSaisieActif = NULL;
 
 void initialiserSDL() {
     SDL_Init(SDL_INIT_VIDEO);
@@ -41,49 +43,95 @@ void afficherTexte(int x, int y, const char* texte, SDL_Color couleur) {
     SDL_DestroyTexture(texture);
 }
 
-void afficherChampSaisie(ChampSaisie* champ) {
-    SDL_SetRenderDrawColor(rendu, 255, 205, 225, 245);
-    SDL_RenderDrawRect(rendu, &(champ->rect));
-    afficherTexte(champ->rect.x + 10, champ->rect.y + 10, champ->texte, (SDL_Color){0, 0, 0, 255});
+void afficherChampSaisie(ChampSaisie champ) {
+    SDL_SetRenderDrawColor(rendu, 205, 25, 225, 20);
+    SDL_RenderDrawRect(rendu, &(champ.rect)); // Modification ici
+    afficherTexte(champ.rect.x + 10, champ.rect.y + 10, champ.texte, (SDL_Color){0, 0, 0, 255}); // Texte en noir
+
+    if (champSaisieActif == &champ) {
+        afficherTexte(champ.rect.x + 10 + strlen(champ.texte) * TAILLE_POLICE, champ.rect.y + 10, "|", (SDL_Color){0, 0, 0, 255}); // Affiche un caractère vide à côté du texte du champ de saisie
+    }
+}
+
+
+void afficherBouton(Bouton bouton) {
+    static bool clicked = false; // Variable statique pour suivre l'état du clic
+
+    SDL_Color couleur;
+    if (bouton.actif) { // Correction ici
+        couleur = (SDL_Color){0, 128, 5, 215}; // Couleur bleue si le bouton est actif
+        if (!clicked) { // Vérifie si le bouton est activé pour la première fois
+            printf("Vous m'avez cliqué\n");
+            clicked = true; // Marque le bouton comme cliqué
+        }
+
+    } else {
+        couleur = (SDL_Color){0, 152, 59, 8}; // Couleur bleue normale, les valeurs ont été ajustées pour éviter le dépassement
+        clicked = false; // Réinitialise la variable clicked lorsque le bouton est désactivé
+    }
+
+    SDL_SetRenderDrawColor(rendu, couleur.r, couleur.g, couleur.b, couleur.a);
+    SDL_RenderFillRect(rendu, &(bouton.rect));
+    afficherTexte(bouton.rect.x + 50, bouton.rect.y + 10, bouton.texte, (SDL_Color){255, 255, 255, 255}); // Texte en blanc
 }
 
 void afficher() {
-    SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(rendu, 255, 255, 255, 255); // Couleur de fond blanc
     SDL_RenderClear(rendu);
 
-    // Afficher le titre "ENREGISTREMENT"
-    afficherTexte(LARGEUR_ECRAN / 2 - 70, 20, "ENREGISTREMENT", (SDL_Color){0, 0, 0, 255});
-
-    // Afficher les champs de saisie
-    afficherChampSaisie(&champNom);
-    afficherChampSaisie(&champPrenoms);
-    afficherChampSaisie(&champEmail);
-    afficherChampSaisie(&champNumero);
-
-    // Afficher le bouton d'enregistrement
-    SDL_Rect rectBouton = {LARGEUR_ECRAN / 2 - 150, 320, 300, 40};
-    SDL_SetRenderDrawColor(rendu, 0, 128, 255, 255);
-    SDL_RenderFillRect(rendu, &rectBouton);
-    afficherTexte(LARGEUR_ECRAN / 2 - 50, 330, "Enregistrer", (SDL_Color){255, 255, 255, 255});
+    afficherChampSaisie(champEmail);
+    afficherChampSaisie(champMotDePasse);
+    afficherBouton(boutonConnexion);
 
     SDL_RenderPresent(rendu);
 }
 
+bool isMouseInsideRect(SDL_Rect rect, int mouseX, int mouseY) {
+    return mouseX >= rect.x && mouseX <= rect.x + rect.w && mouseY >= rect.y && mouseY <= rect.y + rect.h;
+}
 
-
-// AJout pour test
-
-void gererSaisie(SDL_Event evenement, ChampSaisie* champ) {
-    if (evenement.type == SDL_TEXTINPUT) {
-        // Concaténer le texte saisi à la fin du champ actif
-        strcat(champ->texte, evenement.text.text);
+void gererClicChampSaisie(ChampSaisie* champ, int mouseX, int mouseY) {
+    if (isMouseInsideRect(champ->rect, mouseX, mouseY)) {
+        champ->actif = true;
+        champSaisieActif = champ; // Met à jour le champ de saisie actif
+        strcpy(saisie, champ->inputText);
+        champ->texte = "Saisir";
+        printf("Vous avez cliqué sur le champ de saisie\n"); // Affichage du message lorsque le champ de saisie est cliqué
+    } else {
+        champ->actif = false;
     }
-    else if (evenement.type == SDL_KEYDOWN) {
-        if (evenement.key.keysym.sym == SDLK_BACKSPACE && strlen(champ->texte) > 0) {
-            // Supprimer le dernier caractère du champ actif
-            champ->texte[strlen(champ->texte) - 1] = '\0';
+}
+
+void handleDelete(SDL_Event event) {
+    if (champSaisieActif != NULL && event.type == SDL_KEYDOWN &&
+        (event.key.keysym.sym == SDLK_DELETE || event.key.keysym.sym == SDLK_BACKSPACE)) {
+        if (strlen(champSaisieActif->inputText) > 0) { // Vérifie si le champ de saisie n'est pas vide
+            if (strlen(champSaisieActif->inputText) > 1) {
+                champSaisieActif->inputText[strlen(champSaisieActif->inputText) - 1] = '\0'; // Supprime le dernier caractère
+                printf("Vous avez supprimé le dernier caractère\n");
+            } else {
+                champSaisieActif->inputText[0] = ' '; // Réinitialiser l'entrée à une chaîne vide
+                printf("Le champ de saisie est maintenant vide\n");
+            }
+        } else {
+            printf("Erreur : Le champ de saisie est déjà vide\n");
         }
     }
 }
 
-//FIN
+void gererSaisieTexte(SDL_Event event) {
+    if (champSaisieActif != NULL && event.type == SDL_TEXTINPUT) {
+        strcat(champSaisieActif->inputText, event.text.text); // Concatène le texte entré à la fin du texte existant
+        printf("Input Text: %s\n", champSaisieActif->inputText); // Affiche le texte entré dans le champ de saisie
+        champSaisieActif->texte = champSaisieActif->inputText;
+    } else {
+        handleDelete(event); // Gérer la touche "Supprimer"
+    }
+}
+
+void gererClicBouton(Bouton* bouton, int mouseX, int mouseY) {
+    if (isMouseInsideRect(bouton->rect, mouseX, mouseY)) {
+        // Mettez ici le code pour l'action à effectuer lors du clic sur le bouton
+        bouton->actif = !bouton->actif; // Correction ici
+    }
+}
