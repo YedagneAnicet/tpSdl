@@ -1,0 +1,14 @@
+# depslib dependency file v1.0
+1710461228 source:c:\devs\language c\tp_classe\gestion\main.c
+	"enregistrement.h"
+
+1710461422 c:\devs\language c\tp_classe\gestion\enregistrement.h
+	<SDL.h>
+	<SDL_ttf.h>
+	<stdbool.h>
+
+1710461250 source:c:\devs\language c\tp_classe\gestion\enregistrement.c
+	"enregistrement.h"
+	<stdio.h>
+	<string.h>
+
